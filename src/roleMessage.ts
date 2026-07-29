@@ -2,15 +2,20 @@ import { writeFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { dump as stringifyYaml, load as parseYaml } from "js-yaml";
 import {
+  type ArgsOf,
+  Discord,
+  On,
+} from "discordx";
+import {
   type Client,
   EmbedBuilder,
+  Events,
   type Message,
+  type MessageReaction,
   type PartialMessage,
-  type PartialReaction,
+  type PartialMessageReaction,
   type PartialUser,
-  type Reaction,
   type User,
-  type GuildConfig as DiscordGuildConfig,
 } from "discord.js";
 import { getGuildConfig } from "./config";
 import type { BotConfig, GuildConfig } from "./types";
@@ -25,12 +30,21 @@ const CONFIG_PATH = resolve("config.yaml");
 async function resolveMessage(
   msg: Message<true> | PartialMessage,
 ): Promise<Message<true>> {
-  return msg.partial ? await msg.fetch() : (msg as Message<true>);
+  return msg.partial ? ((await msg.fetch()) as Message<true>) : (msg as Message<true>);
+}
+
+/** Fetch a full Message from a Message<boolean> or PartialMessage. */
+async function resolveMessageFromReaction(
+  msg: Message<boolean> | PartialMessage,
+): Promise<Message<true>> {
+  return msg.partial ? ((await msg.fetch()) as Message<true>) : (msg as unknown as Message<true>);
 }
 
 /** Fetch a full Reaction from a possible partial. */
-async function resolveReaction(react: Reaction): Promise<Reaction> {
-  return react.partial ? await react.fetch() : react;
+async function resolveReaction(
+  react: MessageReaction | PartialMessageReaction,
+): Promise<MessageReaction> {
+  return react.partial ? await react.fetch() : (react as MessageReaction);
 }
 
 /** Persist changes to config.yaml on disk. */
@@ -197,13 +211,13 @@ async function updateRoleMessageForMessage(
  * Assigns the corresponding role if the reaction is on a tracked message.
  */
 export async function handleReactionAdd(
-  rawReaction: Reaction | PartialReaction,
+  rawReaction: MessageReaction | PartialMessageReaction,
   rawUser: User | PartialUser,
 ): Promise<void> {
   if (rawUser.bot) return;
 
   const reaction = await resolveReaction(rawReaction);
-  const message = await resolveMessage(reaction.message);
+  const message = await resolveMessageFromReaction(reaction.message);
   const user = rawUser.partial ? await rawUser.fetch() : rawUser;
 
   const guildConfig = getGuildConfig(message.guildId);
@@ -240,13 +254,13 @@ export async function handleReactionAdd(
  * Removes the corresponding role if the reaction is on a tracked message.
  */
 export async function handleReactionRemove(
-  rawReaction: Reaction | PartialReaction,
+  rawReaction: MessageReaction | PartialMessageReaction,
   rawUser: User | PartialUser,
 ): Promise<void> {
   if (rawUser.bot) return;
 
   const reaction = await resolveReaction(rawReaction);
-  const message = await resolveMessage(reaction.message);
+  const message = await resolveMessageFromReaction(reaction.message);
   const user = rawUser.partial ? await rawUser.fetch() : rawUser;
 
   const guildConfig = getGuildConfig(message.guildId);
@@ -271,5 +285,30 @@ export async function handleReactionRemove(
     await member.roles.remove(role);
   } catch (err) {
     console.error(`[handleReactionRemove] Failed to remove role from ${user.id}:`, err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Discordx decorator-based reaction handlers
+// ---------------------------------------------------------------------------
+
+/**
+ * discordx event class that routes reaction events through `@On` decorators.
+ * Discovered automatically by `importx()` during bot startup.
+ */
+@Discord()
+export class RoleReactionHandler {
+  @On({ event: Events.MessageReactionAdd })
+  async onReactionAdd(
+    [reaction, user]: ArgsOf<Events.MessageReactionAdd>,
+  ): Promise<void> {
+    await handleReactionAdd(reaction, user);
+  }
+
+  @On({ event: Events.MessageReactionRemove })
+  async onReactionRemove(
+    [reaction, user]: ArgsOf<Events.MessageReactionRemove>,
+  ): Promise<void> {
+    await handleReactionRemove(reaction, user);
   }
 }

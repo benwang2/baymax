@@ -1,6 +1,5 @@
 import { getConfig, watchConfig } from "./src/config";
 import { client, startBot } from "./src/bot";
-import { registerCommands } from "./src/deployCommands";
 
 // ---------------------------------------------------------------------------
 // Bootstrap
@@ -13,13 +12,10 @@ console.log(`Loaded config: ${config.bot.guilds.length} guild(s)`);
 // 2. Start file watcher for live config changes
 watchConfig();
 
-// 3. Register slash commands with Discord
-await registerCommands();
-
-// 4. Start the bot (connects to Discord gateway)
+// 3. Start the bot (connects to Discord gateway, loads decorators, syncs commands)
 await startBot();
 
-// 5. Graceful shutdown
+// 4. Graceful shutdown
 process.on("SIGINT", () => {
   client.destroy();
   process.exit(0);
