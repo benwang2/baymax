@@ -3,6 +3,12 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "lint": "bun oxlint .",
+    "lint:fix": "bun oxlint --fix .",
+    "fmt": "bun oxfmt --check .",
+    "fmt:write": "bun oxfmt --write ."
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/js-yaml": "^4.0.9",
