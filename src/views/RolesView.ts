@@ -62,7 +62,7 @@ export class RolesView extends View {
         "Use the dropdown below to select the roles you want. " +
           "Then press **Confirm** to apply the changes or **Cancel** to abort.",
       )
-      .setColor(0x0099ff);
+      .setColor(Colors.Blue);
 
     if (this.roles.length > 0) {
       embed.addFields(
@@ -181,22 +181,34 @@ export class RolesView extends View {
         }
       }
 
-      const parts: string[] = [];
+      const roleEmoji = (name: string) =>
+        this.roles.find((r) => r.name.toLowerCase() === name.toLowerCase())?.emoji ?? "";
+
+      const fields: { name: string; value: string }[] = [];
       if (added.length > 0) {
-        parts.push(`✅ Added: ${added.map((n) => `**${n}**`).join(", ")}`);
+        fields.push({
+          name: "+ **Added**",
+          value: added.map((n) => `${roleEmoji(n)} ${n}`).join("\n"),
+        });
       }
       if (removed.length > 0) {
-        parts.push(`❌ Removed: ${removed.map((n) => `**${n}**`).join(", ")}`);
+        fields.push({
+          name: "- **Removed**",
+          value: removed.map((n) => `${roleEmoji(n)} ${n}`).join("\n"),
+        });
       }
-      if (parts.length === 0) {
-        parts.push("No changes made.");
+      if (fields.length === 0) {
+        fields.push({
+          name: "No changes",
+          value: "No changes made.",
+        });
       }
 
       await interaction.update({
         ...EmbedMessage.build({
           title: "Roles Updated",
-          description: parts.join("\n"),
           color: Colors.Green,
+          fields,
         }),
         components: [],
       });
