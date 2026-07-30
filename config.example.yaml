@@ -1,0 +1,13 @@
+bot:
+  guilds:
+    - guild_id: 'YOUR_GUILD_ID'
+      auto_role:
+        channel_id: 'YOUR_CHANNEL_ID'
+        message_id: 'YOUR_MESSAGE_ID'
+        roles:
+          - name: role_name_1
+            emoji: '🎯'
+          - name: role_name_2
+            emoji: '⚔️'
+          - name: role_name_3
+            emoji: '🛡️'
