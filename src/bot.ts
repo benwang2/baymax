@@ -1,7 +1,7 @@
 import { dirname, importx } from "@discordx/importer";
 import { Events, IntentsBitField, Partials } from "discord.js";
 import { Client } from "discordx";
-import { getConfig, onConfigChange } from "./config";
+import { getConfig, getTestGuilds, onConfigChange } from "./config";
 import { ensureRoleMessage, updateRoleMessage } from "./roleMessage";
 
 /** The singleton Discord client instance (discordx extended client). */
@@ -22,6 +22,14 @@ export const client = new Client({
 
 client.once(Events.ClientReady, async () => {
   console.log(`Logged in as ${client.user!.tag}`);
+
+  // If test guilds are configured, restrict command registration to those
+  // guilds for fast propagation (vs. up to an hour for global commands).
+  const testGuilds = getTestGuilds();
+  if (testGuilds.length > 0) {
+    client.botGuilds = testGuilds;
+    console.log(`Registering commands for test guilds: ${testGuilds.join(", ")}`);
+  }
 
   // Sync slash commands with Discord
   await client.initApplicationCommands();

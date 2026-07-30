@@ -108,6 +108,19 @@ export function offConfigChange(cb: (config: BotConfig) => void): void {
   _listeners.delete(cb);
 }
 
+/**
+ * Parse the DISCORD_TEST_GUILDS environment variable into an array of guild IDs.
+ * Returns an empty array when the variable is unset or empty (i.e. production mode).
+ */
+export function getTestGuilds(): string[] {
+  const raw = process.env.DISCORD_TEST_GUILDS;
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+}
+
 /** Find the GuildConfig for a given Discord guild ID. Returns undefined if not found. */
 export function getGuildConfig(guildId: string): GuildConfig | undefined {
   const config = getConfig();
