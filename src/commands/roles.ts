@@ -1,3 +1,4 @@
+import { Logger } from "tslog";
 import {
   ActionRowBuilder,
   type ChatInputCommandInteraction,
@@ -7,6 +8,8 @@ import {
 } from "discord.js";
 import { Discord, SelectMenuComponent, Slash } from "discordx";
 import { getGuildConfig } from "../config";
+
+const logger = new Logger({ name: "roles" });
 
 @Discord()
 export class RolesCommand {
@@ -119,7 +122,7 @@ export class RolesCommand {
         });
       }
     } catch (err) {
-      console.error("[roles/handleSelectMenu] Error:", err);
+      logger.error("[roles/handleSelectMenu] Error:", err);
       await interaction.update({
         content: "An error occurred while updating your roles.",
         components: [],

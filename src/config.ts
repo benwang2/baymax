@@ -1,7 +1,10 @@
 import { readFileSync, watch } from "node:fs";
 import { resolve } from "node:path";
 import { load as parseYaml } from "js-yaml";
+import { Logger } from "tslog";
 import type { BotConfig, GuildConfig } from "./types";
+
+const logger = new Logger({ name: "config" });
 
 const CONFIG_PATH = resolve("config.yaml");
 
@@ -144,11 +147,11 @@ export function watchConfig(): void {
         try {
           cb(newConfig);
         } catch (err) {
-          console.error("Config change listener error:", err);
+          logger.error("Config change listener error:", err);
         }
       }
     } catch (err) {
-      console.error("Failed to reload config.yaml:", err);
+      logger.error("Failed to reload config.yaml:", err);
     }
   });
 }

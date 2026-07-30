@@ -1,8 +1,11 @@
+import { Logger } from "tslog";
 import { dirname, importx } from "@discordx/importer";
 import { Events, IntentsBitField, Partials } from "discord.js";
 import { Client } from "discordx";
 import { getConfig, getTestGuilds, onConfigChange } from "./config";
 import { ensureRoleMessage, updateRoleMessage } from "./roleMessage";
+
+const logger = new Logger({ name: "bot" });
 
 /** The singleton Discord client instance (discordx extended client). */
 export const client = new Client({
@@ -21,14 +24,14 @@ export const client = new Client({
 // ---------------------------------------------------------------------------
 
 client.once(Events.ClientReady, async () => {
-  console.log(`Logged in as ${client.user!.tag}`);
+  logger.info(`Logged in as ${client.user!.tag}`);
 
   // If test guilds are configured, restrict command registration to those
   // guilds for fast propagation (vs. up to an hour for global commands).
   const testGuilds = getTestGuilds();
   if (testGuilds.length > 0) {
     client.botGuilds = testGuilds;
-    console.log(`Registering commands for test guilds: ${testGuilds.join(", ")}`);
+    logger.info(`Registering commands for test guilds: ${testGuilds.join(", ")}`);
   }
 
   // Sync slash commands with Discord
@@ -40,7 +43,7 @@ client.once(Events.ClientReady, async () => {
     try {
       await ensureRoleMessage(client as unknown as import("discord.js").Client<true>, guildConfig);
     } catch (err) {
-      console.error(
+      logger.error(
         `[bot/ready] Failed to ensure role message for guild ${guildConfig.guild_id}:`,
         err,
       );
@@ -52,7 +55,7 @@ client.once(Events.ClientReady, async () => {
     for (const guildConfig of newConfig.bot.guilds) {
       updateRoleMessage(client as unknown as import("discord.js").Client<true>, guildConfig).catch(
         (err) => {
-          console.error(
+          logger.error(
             `[bot/configChange] Failed to update role message for guild ${guildConfig.guild_id}:`,
             err,
           );

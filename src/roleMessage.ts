@@ -1,6 +1,7 @@
 import { writeFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { dump as stringifyYaml, load as parseYaml } from "js-yaml";
+import { Logger } from "tslog";
 import { type ArgsOf, Discord, On } from "discordx";
 import {
   type Client,
@@ -15,6 +16,8 @@ import {
 } from "discord.js";
 import { getGuildConfig } from "./config";
 import type { BotConfig, GuildConfig } from "./types";
+
+const logger = new Logger({ name: "roleMessage" });
 
 const CONFIG_PATH = resolve("config.yaml");
 
@@ -75,7 +78,7 @@ export async function ensureRoleMessage(
 ): Promise<void> {
   const guild = client.guilds.cache.get(guildConfig.guild_id);
   if (!guild) {
-    console.warn(`[ensureRoleMessage] Guild ${guildConfig.guild_id} not found in cache`);
+    logger.warn(`[ensureRoleMessage] Guild ${guildConfig.guild_id} not found in cache`);
     return;
   }
 
@@ -107,7 +110,7 @@ export async function ensureRoleMessage(
   const targetChannel = channel_id ? await guild.channels.fetch(channel_id) : guild.systemChannel;
 
   if (!targetChannel?.isTextBased()) {
-    console.warn(`[ensureRoleMessage] No suitable channel for guild ${guildConfig.guild_id}`);
+    logger.warn(`[ensureRoleMessage] No suitable channel for guild ${guildConfig.guild_id}`);
     return;
   }
 
@@ -220,7 +223,7 @@ export async function handleReactionAdd(
   const guild = message.guild;
   const role = guild.roles.cache.find((r) => r.name.toLowerCase() === roleEntry.name.toLowerCase());
   if (!role) {
-    console.warn(`[handleReactionAdd] Role "${roleEntry.name}" not found in guild ${guild.id}`);
+    logger.warn(`[handleReactionAdd] Role "${roleEntry.name}" not found in guild ${guild.id}`);
     return;
   }
 
@@ -228,7 +231,7 @@ export async function handleReactionAdd(
     const member = await guild.members.fetch(user.id);
     await member.roles.add(role);
   } catch (err) {
-    console.error(`[handleReactionAdd] Failed to add role to ${user.id}:`, err);
+    logger.error(`[handleReactionAdd] Failed to add role to ${user.id}:`, err);
   }
 }
 
@@ -263,7 +266,7 @@ export async function handleReactionRemove(
     const member = await guild.members.fetch(user.id);
     await member.roles.remove(role);
   } catch (err) {
-    console.error(`[handleReactionRemove] Failed to remove role from ${user.id}:`, err);
+    logger.error(`[handleReactionRemove] Failed to remove role from ${user.id}:`, err);
   }
 }
 

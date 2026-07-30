@@ -1,5 +1,8 @@
+import { Logger } from "tslog";
 import { getConfig, watchConfig } from "./src/config";
 import { client, startBot } from "./src/bot";
+
+const logger = new Logger({ name: "index" });
 
 // ---------------------------------------------------------------------------
 // Bootstrap
@@ -7,7 +10,7 @@ import { client, startBot } from "./src/bot";
 
 // 1. Load initial config
 const config = getConfig();
-console.log(`Loaded config: ${config.bot.guilds.length} guild(s)`);
+logger.info(`Loaded config: ${config.bot.guilds.length} guild(s)`);
 
 // 2. Start file watcher for live config changes
 watchConfig();
