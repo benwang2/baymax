@@ -1,6 +1,7 @@
 import { Logger } from "tslog";
 import {
   ActionRowBuilder,
+  MessageFlags,
   type ChatInputCommandInteraction,
   type MessageActionRowComponentBuilder,
   StringSelectMenuBuilder,
@@ -70,7 +71,9 @@ export class RolesCommand {
 
     await interaction.reply({
       components: [row],
-      ephemeral: true,
+      flags: [
+        MessageFlags.Ephemeral, // Ensure the reply is only visible to the user
+      ]
     });
   }
 
