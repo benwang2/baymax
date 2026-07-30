@@ -85,7 +85,7 @@ export async function startBot(): Promise<void> {
   }
 
   // Dynamically import all decorated classes (commands, events, etc.)
-  await importx(`${dirname(import.meta.url)}/{commands,__tests__}/**/*.{js,ts}`);
+  await importx(`${dirname(import.meta.url)}/commands/**/*.{js,ts}`);
 
   await client.login(token);
 }
