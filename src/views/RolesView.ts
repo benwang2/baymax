@@ -3,6 +3,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  Colors,
   EmbedBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
@@ -11,6 +12,7 @@ import {
   type MessageComponentInteraction,
 } from "discord.js";
 import { getGuildConfig } from "../config";
+import { EmbedMessage } from "./EmbedMessage";
 import { View } from "./View";
 
 const logger = new Logger({ name: "RolesView" });
@@ -136,8 +138,11 @@ export class RolesView extends View {
     // ── Cancel button ────────────────────────────────────────────────
     if (interaction.isButton() && interaction.customId === "roles_cancel") {
       await interaction.update({
-        content: "❌ Role selection cancelled.",
-        embeds: [],
+        ...EmbedMessage.build({
+          title: "Cancelled",
+          description: "❌ Role selection cancelled.",
+          color: Colors.Red,
+        }),
         components: [],
       });
       return { done: true };
@@ -188,15 +193,20 @@ export class RolesView extends View {
       }
 
       await interaction.update({
-        content: parts.join("\n"),
-        embeds: [],
+        ...EmbedMessage.build({
+          title: "Roles Updated",
+          description: parts.join("\n"),
+          color: Colors.Green,
+        }),
         components: [],
       });
     } catch (err) {
       logger.error("[RolesView/applyChanges] Error:", err);
       await interaction.update({
-        content: "An error occurred while updating your roles.",
-        embeds: [],
+        ...EmbedMessage.error(
+          "An error occurred while updating your roles.",
+          "Error",
+        ),
         components: [],
       });
     }
