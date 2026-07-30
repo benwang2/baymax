@@ -211,7 +211,11 @@ export async function handleReactionAdd(
 
   const emojiName = reaction.emoji.name ?? reaction.emoji.identifier;
   const roleEntry = guildConfig.auto_role.roles.find((r) => r.emoji === emojiName);
-  if (!roleEntry) return; // Unconfigured emoji — ignore
+  if (!roleEntry) {
+    // Unconfigured emoji — remove the reaction
+    await reaction.remove();
+    return;
+  }
 
   const guild = message.guild;
   const role = guild.roles.cache.find((r) => r.name.toLowerCase() === roleEntry.name.toLowerCase());
