@@ -55,6 +55,15 @@ function mockRoleCache(entries: [string, { id: string; name: string }][]) {
 }
 
 function mockStringSelectInteraction(overrides: Record<string, unknown> = {}) {
+  const baseMember = {
+    roles: {
+      cache: new Map(),
+      has: () => false,
+      add: jest.fn(),
+      remove: jest.fn(),
+    },
+  };
+
   return {
     guildId: "123456789012345678",
     customId: "roles_select",
@@ -69,14 +78,7 @@ function mockStringSelectInteraction(overrides: Record<string, unknown> = {}) {
         ]),
       },
       members: {
-        fetch: async () => ({
-          roles: {
-            cache: new Map(),
-            has: () => false,
-            add: jest.fn(),
-            remove: jest.fn(),
-          },
-        }),
+        fetch: async () => baseMember,
       },
     },
     ...overrides,
@@ -113,7 +115,7 @@ describe("/roles command — execute", () => {
     });
   });
 
-  it("includes all configured roles as select menu options", async () => {
+  it("includes all configured roles as select menu options with defaults", async () => {
     const { RolesCommand } = await import("../../commands/roles");
     const cmd = new RolesCommand();
     const interaction = mockChatInputInteraction();
@@ -124,35 +126,107 @@ describe("/roles command — execute", () => {
     const selectMenu = row.components[0];
 
     expect(selectMenu.options).toHaveLength(3);
-    expect(selectMenu.options[0]!.data).toMatchObject({
-      label: "Overwatch",
-      value: "overwatch",
-    });
-    expect(selectMenu.options[1]!.data).toMatchObject({
-      label: "Valorant",
-      value: "valorant",
-    });
-    expect(selectMenu.options[2]!.data).toMatchObject({
-      label: "League",
-      value: "league",
-    });
+    expect(selectMenu.data.min_values).toBe(0);
+    expect(selectMenu.data.max_values).toBe(3);
+    // With no existing roles, all defaults should be false
+    expect(selectMenu.options[0]!.data.default).toBe(false);
+    expect(selectMenu.options[1]!.data.default).toBe(false);
+    expect(selectMenu.options[2]!.data.default).toBe(false);
   });
 });
 
 describe("/roles command — handleSelectMenu", () => {
-  it("adds a role the user does not have", async () => {
+  it("adds selected roles the user does not already have", async () => {
     const { RolesCommand } = await import("../../commands/roles");
     const cmd = new RolesCommand();
-    const interaction = mockStringSelectInteraction();
+    // User selects "overwatch" and "valorant"; has none initially
+    const interaction = mockStringSelectInteraction({ values: ["overwatch", "valorant"] });
     await cmd.handleSelectMenu(interaction);
 
     expect(interaction.update).toHaveBeenCalledWith({
-      content: "✅ Added role overwatch",
+      content: "✅ Added: **overwatch**, **valorant**",
       components: [],
     });
   });
 
-  it("removes a role the user already has", async () => {
+  it("removes roles the user has but did not select", async () => {
+    const { RolesCommand } = await import("../../commands/roles");
+    const cmd = new RolesCommand();
+
+    const memberWithRoles = {
+      roles: {
+        cache: new Map([
+          ["role_overwatch_id", { id: "role_overwatch_id" }],
+          ["role_valorant_id", { id: "role_valorant_id" }],
+        ]),
+        has: (id: string) =>
+          id === "role_overwatch_id" || id === "role_valorant_id",
+        add: jest.fn(),
+        remove: jest.fn(),
+      },
+    };
+
+    const interaction = mockStringSelectInteraction({
+      values: ["overwatch"], // only keeps overwatch, drops valorant
+      guild: {
+        roles: {
+          cache: mockRoleCache([
+            ["role_overwatch_id", { id: "role_overwatch_id", name: "overwatch" }],
+            ["role_valorant_id", { id: "role_valorant_id", name: "valorant" }],
+          ]),
+        },
+        members: {
+          fetch: async () => memberWithRoles,
+        },
+      },
+    });
+
+    await cmd.handleSelectMenu(interaction);
+
+    expect(interaction.update).toHaveBeenCalledWith({
+      content: "❌ Removed: **valorant**",
+      components: [],
+    });
+  });
+
+  it("handles both add and remove in one interaction", async () => {
+    const { RolesCommand } = await import("../../commands/roles");
+    const cmd = new RolesCommand();
+
+    const memberWithSomeRoles = {
+      roles: {
+        cache: new Map([["role_overwatch_id", { id: "role_overwatch_id" }]]),
+        has: (id: string) => id === "role_overwatch_id",
+        add: jest.fn(),
+        remove: jest.fn(),
+      },
+    };
+
+    const interaction = mockStringSelectInteraction({
+      values: ["valorant", "league"], // adds valorant+league, drops overwatch
+      guild: {
+        roles: {
+          cache: mockRoleCache([
+            ["role_overwatch_id", { id: "role_overwatch_id", name: "overwatch" }],
+            ["role_valorant_id", { id: "role_valorant_id", name: "valorant" }],
+            ["role_league_id", { id: "role_league_id", name: "league" }],
+          ]),
+        },
+        members: {
+          fetch: async () => memberWithSomeRoles,
+        },
+      },
+    });
+
+    await cmd.handleSelectMenu(interaction);
+
+    expect(interaction.update).toHaveBeenCalledWith({
+      content: "✅ Added: **valorant**, **league**\n❌ Removed: **overwatch**",
+      components: [],
+    });
+  });
+
+  it("shows no changes when selections match current roles", async () => {
     const { RolesCommand } = await import("../../commands/roles");
     const cmd = new RolesCommand();
 
@@ -166,6 +240,7 @@ describe("/roles command — handleSelectMenu", () => {
     };
 
     const interaction = mockStringSelectInteraction({
+      values: ["overwatch"],
       guild: {
         roles: {
           cache: mockRoleCache([
@@ -181,30 +256,7 @@ describe("/roles command — handleSelectMenu", () => {
     await cmd.handleSelectMenu(interaction);
 
     expect(interaction.update).toHaveBeenCalledWith({
-      content: "❌ Removed role overwatch",
-      components: [],
-    });
-  });
-
-  it("shows an error when the role is not found on the server", async () => {
-    const { RolesCommand } = await import("../../commands/roles");
-    const cmd = new RolesCommand();
-
-    const interaction = mockStringSelectInteraction({
-      guild: {
-        roles: {
-          cache: mockRoleCache([]),
-        },
-        members: {
-          fetch: async () => ({}),
-        },
-      },
-    });
-
-    await cmd.handleSelectMenu(interaction);
-
-    expect(interaction.update).toHaveBeenCalledWith({
-      content: 'Could not find the role "overwatch" on this server.',
+      content: "No changes made.",
       components: [],
     });
   });
@@ -218,19 +270,6 @@ describe("/roles command — handleSelectMenu", () => {
 
     expect(interaction.update).toHaveBeenCalledWith({
       content: "No roles configured for this server.",
-      components: [],
-    });
-  });
-
-  it("shows an error when no role is selected", async () => {
-    const { RolesCommand } = await import("../../commands/roles");
-    const cmd = new RolesCommand();
-
-    const interaction = mockStringSelectInteraction({ values: [] });
-    await cmd.handleSelectMenu(interaction);
-
-    expect(interaction.update).toHaveBeenCalledWith({
-      content: "No role selected.",
       components: [],
     });
   });

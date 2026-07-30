@@ -4,6 +4,7 @@ import {
   type ChatInputCommandInteraction,
   type MessageActionRowComponentBuilder,
   StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
   type StringSelectMenuInteraction,
 } from "discord.js";
 import { Discord, SelectMenuComponent, Slash } from "discordx";
@@ -43,17 +44,26 @@ export class RolesCommand {
       return;
     }
 
+    // Determine which roles the member already has
+    const member = await interaction.guild?.members.fetch(interaction.user.id);
+    const memberRoleNames = new Set(
+      member?.roles.cache.map((r) => r.name.toLowerCase()) ?? [],
+    );
+
     const selectMenu = new StringSelectMenuBuilder()
       .setCustomId("roles_select")
-      .setPlaceholder("Choose a role to toggle...")
-      .setMinValues(1)
-      .setMaxValues(1)
+      .setPlaceholder("Select your roles...")
+      .setMinValues(0)
+      .setMaxValues(roles.length)
       .addOptions(
-        roles.map((role) => ({
-          label: role.name.charAt(0).toUpperCase() + role.name.slice(1),
-          value: role.name,
-          emoji: role.emoji,
-        })),
+        roles.map((role) => {
+          const hasRole = memberRoleNames.has(role.name.toLowerCase());
+          return new StringSelectMenuOptionBuilder()
+            .setLabel(role.name.charAt(0).toUpperCase() + role.name.slice(1))
+            .setValue(role.name)
+            .setEmoji(role.emoji)
+            .setDefault(hasRole);
+        }),
       );
 
     const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(selectMenu);
@@ -84,43 +94,48 @@ export class RolesCommand {
       return;
     }
 
-    const roleName = interaction.values[0];
-    if (!roleName) {
-      await interaction.update({
-        content: "No role selected.",
-        components: [],
-      });
-      return;
-    }
+    const { roles } = guildConfig.auto_role;
 
-    const role = interaction.guild?.roles.cache.find(
-      (r) => r.name.toLowerCase() === roleName.toLowerCase(),
-    );
-    if (!role) {
-      await interaction.update({
-        content: `Could not find the role "${roleName}" on this server.`,
-        components: [],
-      });
-      return;
-    }
+    const selectedNames = new Set(interaction.values.map((v) => v.toLowerCase()));
+    const added: string[] = [];
+    const removed: string[] = [];
 
     try {
       const member = await interaction.guild!.members.fetch(interaction.user.id);
-      const hasRole = member.roles.cache.has(role.id);
 
-      if (hasRole) {
-        await member.roles.remove(role);
-        await interaction.update({
-          content: `❌ Removed role ${role.name}`,
-          components: [],
-        });
-      } else {
-        await member.roles.add(role);
-        await interaction.update({
-          content: `✅ Added role ${role.name}`,
-          components: [],
-        });
+      for (const roleConfig of roles) {
+        const role = interaction.guild?.roles.cache.find(
+          (r) => r.name.toLowerCase() === roleConfig.name.toLowerCase(),
+        );
+        if (!role) continue;
+
+        const isSelected = selectedNames.has(roleConfig.name.toLowerCase());
+        const hasRole = member.roles.cache.has(role.id);
+
+        if (isSelected && !hasRole) {
+          await member.roles.add(role);
+          added.push(roleConfig.name);
+        } else if (!isSelected && hasRole) {
+          await member.roles.remove(role);
+          removed.push(roleConfig.name);
+        }
       }
+
+      const parts: string[] = [];
+      if (added.length > 0) {
+        parts.push(`✅ Added: ${added.map((n) => `**${n}**`).join(", ")}`);
+      }
+      if (removed.length > 0) {
+        parts.push(`❌ Removed: ${removed.map((n) => `**${n}**`).join(", ")}`);
+      }
+      if (parts.length === 0) {
+        parts.push("No changes made.");
+      }
+
+      await interaction.update({
+        content: parts.join("\n"),
+        components: [],
+      });
     } catch (err) {
       logger.error("[roles/handleSelectMenu] Error:", err);
       await interaction.update({
