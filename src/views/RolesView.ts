@@ -65,10 +65,9 @@ export class RolesView extends View {
     if (this.roles.length > 0) {
       embed.addFields(
         this.roles.map((role) => {
-          const isSelected = this.selected.has(role.name.toLowerCase());
           return {
             name: `${role.emoji} ${role.name.charAt(0).toUpperCase() + role.name.slice(1)}`,
-            value: isSelected ? "✅ Selected" : "❌ Not selected",
+            value: "",
             inline: true,
           };
         }),

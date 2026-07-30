@@ -65,9 +65,13 @@ client.once(Events.ClientReady, async () => {
   });
 });
 
-// Route interactions (@Slash, @SelectMenuComponent, etc.)
+// Route interactions: let discordx handle commands (@Slash, @ContextMenu),
+// while component interactions (select menus, buttons) are handled by
+// View subclasses via their own collectors (awaitMessageComponent).
 client.on(Events.InteractionCreate, (interaction) => {
-  client.executeInteraction(interaction);
+  if (interaction.isCommand() || interaction.isContextMenuCommand()) {
+    client.executeInteraction(interaction);
+  }
 });
 
 // ---------------------------------------------------------------------------
