@@ -136,7 +136,7 @@ export function getGuildConfig(guildId: string): GuildConfig | undefined {
  * listeners are notified with the new config.
  */
 export function watchConfig(): void {
-  loadConfig();
+  let oldConfig = loadConfig();
 
   watch(CONFIG_PATH, (event) => {
     if (event !== "change") return;
@@ -150,7 +150,15 @@ export function watchConfig(): void {
           logger.error("Config change listener error:", err);
         }
       }
+      oldConfig = newConfig;
     } catch (err) {
+      for (const cb of _listeners) {
+        try {
+          cb(oldConfig);
+        } catch (err) {
+          logger.error("Config change listener error:", err);
+        }
+      }
       logger.error("Failed to reload config.yaml:", err);
     }
   });
