@@ -59,17 +59,23 @@ function parseConfig(raw: string): BotConfig {
 
     for (const role of ar.roles) {
       if (!role || typeof role !== "object") {
-        throw new Error(`config.yaml: guild ${g.guild_id} auto_role.roles: each role must be an object`);
+        throw new Error(
+          `config.yaml: guild ${g.guild_id} auto_role.roles: each role must be an object`,
+        );
       }
 
       const r = role as Record<string, unknown>;
 
       if (typeof r.name !== "string" || !r.name) {
-        throw new Error(`config.yaml: guild ${g.guild_id} auto_role.roles: each role must have a non-empty "name"`);
+        throw new Error(
+          `config.yaml: guild ${g.guild_id} auto_role.roles: each role must have a non-empty "name"`,
+        );
       }
 
       if (typeof r.emoji !== "string" || !r.emoji) {
-        throw new Error(`config.yaml: guild ${g.guild_id} auto_role.roles: each role must have a non-empty "emoji"`);
+        throw new Error(
+          `config.yaml: guild ${g.guild_id} auto_role.roles: each role must have a non-empty "emoji"`,
+        );
       }
     }
   }

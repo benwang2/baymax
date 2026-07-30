@@ -1,11 +1,7 @@
 import { writeFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { dump as stringifyYaml, load as parseYaml } from "js-yaml";
-import {
-  type ArgsOf,
-  Discord,
-  On,
-} from "discordx";
+import { type ArgsOf, Discord, On } from "discordx";
 import {
   type Client,
   EmbedBuilder,
@@ -25,13 +21,6 @@ const CONFIG_PATH = resolve("config.yaml");
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Fetch a full Message from a possible partial. */
-async function resolveMessage(
-  msg: Message<true> | PartialMessage,
-): Promise<Message<true>> {
-  return msg.partial ? ((await msg.fetch()) as Message<true>) : (msg as Message<true>);
-}
 
 /** Fetch a full Message from a Message<boolean> or PartialMessage. */
 async function resolveMessageFromReaction(
@@ -115,14 +104,10 @@ export async function ensureRoleMessage(
   }
 
   // Send a new message
-  const targetChannel = channel_id
-    ? await guild.channels.fetch(channel_id)
-    : guild.systemChannel;
+  const targetChannel = channel_id ? await guild.channels.fetch(channel_id) : guild.systemChannel;
 
   if (!targetChannel?.isTextBased()) {
-    console.warn(
-      `[ensureRoleMessage] No suitable channel for guild ${guildConfig.guild_id}`,
-    );
+    console.warn(`[ensureRoleMessage] No suitable channel for guild ${guildConfig.guild_id}`);
     return;
   }
 
@@ -136,9 +121,7 @@ export async function ensureRoleMessage(
 
   // Persist the new message and channel IDs
   const config = parseYaml(readFileSync(CONFIG_PATH, "utf-8")) as BotConfig;
-  const stored = config.bot.guilds.find(
-    (g) => g.guild_id === guildConfig.guild_id,
-  );
+  const stored = config.bot.guilds.find((g) => g.guild_id === guildConfig.guild_id);
   if (stored) {
     stored.auto_role.channel_id = targetChannel.id;
     stored.auto_role.message_id = message.id;
@@ -198,7 +181,7 @@ async function updateRoleMessageForMessage(
   }
 
   // Remove stale reactions
-  for (const [reactionId, reaction] of currentReactions) {
+  for (const [_reactionId, reaction] of currentReactions) {
     const emojiName = reaction.emoji.name ?? reaction.emoji.identifier;
     if (!configuredEmojis.has(emojiName)) {
       await reaction.remove();
@@ -227,15 +210,11 @@ export async function handleReactionAdd(
   if (message.id !== guildConfig.auto_role.message_id) return;
 
   const emojiName = reaction.emoji.name ?? reaction.emoji.identifier;
-  const roleEntry = guildConfig.auto_role.roles.find(
-    (r) => r.emoji === emojiName,
-  );
+  const roleEntry = guildConfig.auto_role.roles.find((r) => r.emoji === emojiName);
   if (!roleEntry) return; // Unconfigured emoji — ignore
 
   const guild = message.guild;
-  const role = guild.roles.cache.find(
-    (r) => r.name.toLowerCase() === roleEntry.name.toLowerCase(),
-  );
+  const role = guild.roles.cache.find((r) => r.name.toLowerCase() === roleEntry.name.toLowerCase());
   if (!role) {
     console.warn(`[handleReactionAdd] Role "${roleEntry.name}" not found in guild ${guild.id}`);
     return;
@@ -269,15 +248,11 @@ export async function handleReactionRemove(
   if (message.id !== guildConfig.auto_role.message_id) return;
 
   const emojiName = reaction.emoji.name ?? reaction.emoji.identifier;
-  const roleEntry = guildConfig.auto_role.roles.find(
-    (r) => r.emoji === emojiName,
-  );
+  const roleEntry = guildConfig.auto_role.roles.find((r) => r.emoji === emojiName);
   if (!roleEntry) return;
 
   const guild = message.guild;
-  const role = guild.roles.cache.find(
-    (r) => r.name.toLowerCase() === roleEntry.name.toLowerCase(),
-  );
+  const role = guild.roles.cache.find((r) => r.name.toLowerCase() === roleEntry.name.toLowerCase());
   if (!role) return;
 
   try {
@@ -299,16 +274,12 @@ export async function handleReactionRemove(
 @Discord()
 export class RoleReactionHandler {
   @On({ event: Events.MessageReactionAdd })
-  async onReactionAdd(
-    [reaction, user]: ArgsOf<Events.MessageReactionAdd>,
-  ): Promise<void> {
+  async onReactionAdd([reaction, user]: ArgsOf<Events.MessageReactionAdd>): Promise<void> {
     await handleReactionAdd(reaction, user);
   }
 
   @On({ event: Events.MessageReactionRemove })
-  async onReactionRemove(
-    [reaction, user]: ArgsOf<Events.MessageReactionRemove>,
-  ): Promise<void> {
+  async onReactionRemove([reaction, user]: ArgsOf<Events.MessageReactionRemove>): Promise<void> {
     await handleReactionRemove(reaction, user);
   }
 }

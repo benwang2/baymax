@@ -42,9 +42,7 @@ function mockChatInputInteraction(overrides: Record<string, unknown> = {}) {
 }
 
 /** Create a mock Collection-like cache that supports .find() */
-function mockRoleCache(
-  entries: [string, { id: string; name: string }][],
-) {
+function mockRoleCache(entries: [string, { id: string; name: string }][]) {
   const map = new Map(entries);
   return Object.assign(map, {
     find: function (fn: (r: { id: string; name: string }) => boolean) {

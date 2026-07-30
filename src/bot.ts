@@ -42,12 +42,14 @@ client.once(Events.ClientReady, async () => {
   // Live-reload on config changes
   onConfigChange((newConfig) => {
     for (const guildConfig of newConfig.bot.guilds) {
-      updateRoleMessage(client as unknown as import("discord.js").Client<true>, guildConfig).catch((err) => {
-        console.error(
-          `[bot/configChange] Failed to update role message for guild ${guildConfig.guild_id}:`,
-          err,
-        );
-      });
+      updateRoleMessage(client as unknown as import("discord.js").Client<true>, guildConfig).catch(
+        (err) => {
+          console.error(
+            `[bot/configChange] Failed to update role message for guild ${guildConfig.guild_id}:`,
+            err,
+          );
+        },
+      );
     }
   });
 });

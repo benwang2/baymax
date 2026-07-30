@@ -1,13 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { EmbedBuilder } from "discord.js";
 import { buildEmbed } from "../roleMessage";
 import type { GuildRole } from "../types";
 
 describe("buildEmbed", () => {
   it("creates an embed with correct title and description", () => {
-    const roles: GuildRole[] = [
-      { name: "overwatch", emoji: "🎮" },
-    ];
+    const roles: GuildRole[] = [{ name: "overwatch", emoji: "🎮" }];
     const embed = buildEmbed(roles);
     const data = embed.data;
 
@@ -72,18 +69,14 @@ describe("reaction-to-role mapping logic", () => {
 
   it("matches role names case-insensitively", () => {
     const roleName = "Overwatch";
-    const match = roles.find(
-      (r) => r.name.toLowerCase() === roleName.toLowerCase(),
-    );
+    const match = roles.find((r) => r.name.toLowerCase() === roleName.toLowerCase());
     expect(match).toBeDefined();
     expect(match!.name).toBe("overwatch");
   });
 
   it("does not match a role name that does not exist", () => {
     const roleName = "minecraft";
-    const match = roles.find(
-      (r) => r.name.toLowerCase() === roleName.toLowerCase(),
-    );
+    const match = roles.find((r) => r.name.toLowerCase() === roleName.toLowerCase());
     expect(match).toBeUndefined();
   });
 });

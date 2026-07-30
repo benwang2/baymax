@@ -53,10 +53,7 @@ export class RolesCommand {
         })),
       );
 
-    const row =
-      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-        selectMenu,
-      );
+    const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(selectMenu);
 
     await interaction.reply({
       components: [row],
@@ -65,9 +62,7 @@ export class RolesCommand {
   }
 
   @SelectMenuComponent({ id: "roles_select" })
-  async handleSelectMenu(
-    interaction: StringSelectMenuInteraction,
-  ): Promise<void> {
+  async handleSelectMenu(interaction: StringSelectMenuInteraction): Promise<void> {
     const guildId = interaction.guildId;
     if (!guildId) {
       await interaction.update({
@@ -107,9 +102,7 @@ export class RolesCommand {
     }
 
     try {
-      const member = await interaction.guild!.members.fetch(
-        interaction.user.id,
-      );
+      const member = await interaction.guild!.members.fetch(interaction.user.id);
       const hasRole = member.roles.cache.has(role.id);
 
       if (hasRole) {

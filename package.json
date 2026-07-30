@@ -1,13 +1,19 @@
 {
   "name": "baymax",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "index.ts",
   "scripts": {
     "lint": "bun oxlint .",
     "lint:fix": "bun oxlint --fix .",
     "fmt": "bun oxfmt --check .",
     "fmt:write": "bun oxfmt --write ."
+  },
+  "dependencies": {
+    "@discordx/importer": "^1.3.3",
+    "discord.js": "^14.27.0",
+    "discordx": "^11.13.3",
+    "js-yaml": "^5.2.2"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -17,11 +23,5 @@
   },
   "peerDependencies": {
     "typescript": "^5"
-  },
-  "dependencies": {
-    "@discordx/importer": "^1.3.3",
-    "discord.js": "^14.27.0",
-    "discordx": "^11.13.3",
-    "js-yaml": "^5.2.2"
   }
 }
