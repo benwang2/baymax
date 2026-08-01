@@ -1,0 +1,15 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Local config (contains secrets — never bake into an image)
+config.yaml
+.env
+.env.*
+
+# VCS / tooling
+.git
+.gitignore
+*.md
