@@ -79,14 +79,35 @@ client.on(Events.InteractionCreate, (interaction) => {
 // ---------------------------------------------------------------------------
 
 /**
+ * Validate required environment variables, failing fast with a clear,
+ * actionable error on the first missing or blank value.
+ */
+export function validateEnvironment(): void {
+  const token = process.env.DISCORD_TOKEN?.trim();
+  if (!token) {
+    throw new Error(
+      "DISCORD_TOKEN is not set. Add your bot token to .env or the environment " +
+        "(https://discord.com/developers/applications).",
+    );
+  }
+
+  const clientId = process.env.DISCORD_CLIENT_ID?.trim();
+  if (!clientId) {
+    throw new Error(
+      "DISCORD_CLIENT_ID is not set. Add your bot's Application (Client) ID to " +
+        ".env or the environment (https://discord.com/developers/applications).",
+    );
+  }
+}
+
+/**
  * Load decorated modules via importx, log in to Discord, and start the bot.
- * The DISCORD_TOKEN environment variable must be set.
+ * Requires DISCORD_TOKEN and DISCORD_CLIENT_ID to be set (see validateEnvironment).
  */
 export async function startBot(): Promise<void> {
-  const token = process.env.DISCORD_TOKEN;
-  if (!token) {
-    throw new Error("DISCORD_TOKEN environment variable is not set");
-  }
+  validateEnvironment();
+
+  const token = process.env.DISCORD_TOKEN!;
 
   // Dynamically import all decorated classes (commands, events, etc.)
   await importx(`${dirname(import.meta.url)}/commands/**/*.{js,ts}`);

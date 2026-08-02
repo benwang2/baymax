@@ -88,7 +88,19 @@ function parseConfig(raw: string): BotConfig {
 
 /** Read and parse config.yaml from disk. */
 export function loadConfig(): BotConfig {
-  const raw = readFileSync(CONFIG_PATH, "utf-8");
+  let raw: string;
+  try {
+    raw = readFileSync(CONFIG_PATH, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(
+        `config.yaml not found at ${CONFIG_PATH}. Copy config.example.yaml to ` +
+          "config.yaml and fill in your bot settings.",
+      );
+    }
+    throw err;
+  }
+
   _config = parseConfig(raw);
   return _config;
 }
