@@ -1,0 +1,10 @@
+services:
+  baymax:
+    build: .
+    restart: unless-stopped
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:?set DISCORD_TOKEN in .env}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?set DISCORD_CLIENT_ID in .env}
+      DISCORD_TEST_GUILDS: ${DISCORD_TEST_GUILDS:-}
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
