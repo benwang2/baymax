@@ -1,6 +1,6 @@
 import { Logger } from "tslog";
 import { getConfig, watchConfig } from "./src/config";
-import { client, startBot } from "./src/bot";
+import { client, startBot, validateEnvironment } from "./src/bot";
 
 const logger = new Logger({ name: "index" });
 
@@ -8,7 +8,10 @@ const logger = new Logger({ name: "index" });
 // Bootstrap
 // ---------------------------------------------------------------------------
 
-// 1. Load initial config
+// 0. Fail fast: required env vars (DISCORD_TOKEN, DISCORD_CLIENT_ID) must be set
+validateEnvironment();
+
+// 1. Load initial config (fails fast with a clear message if config.yaml is missing)
 const config = getConfig();
 logger.info(`Loaded config: ${config.bot.guilds.length} guild(s)`);
 
