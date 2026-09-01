@@ -55,7 +55,7 @@ export function buildEmbed(roles: GuildConfig["auto_role"]["roles"]): EmbedBuild
   for (const role of roles) {
     embed.addFields({
       name: `${role.emoji} ${role.name}`,
-      value: `React with ${role.emoji}`,
+      value: ``,
     });
   }
 
