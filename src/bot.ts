@@ -1,6 +1,8 @@
 import { Logger } from "tslog";
-import { dirname, importx } from "@discordx/importer";
 import { Events, IntentsBitField, Partials } from "discord.js";
+
+
+import "./commands";
 import { Client } from "discordx";
 import { getConfig, getTestGuilds, onConfigChange } from "./config";
 import { ensureRoleMessage, updateRoleMessage } from "./roleMessage";
@@ -109,8 +111,7 @@ export async function startBot(): Promise<void> {
 
   const token = process.env.DISCORD_TOKEN!;
 
-  // Dynamically import all decorated classes (commands, events, etc.)
-  await importx(`${dirname(import.meta.url)}/commands/**/*.{js,ts}`);
-
+  // Decorated command modules are imported at the top of this file so their
+  // @Discord/@Slash decorators are registered before we sync commands.
   await client.login(token);
 }
