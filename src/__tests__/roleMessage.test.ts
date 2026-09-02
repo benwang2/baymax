@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildEmbed } from "../roleMessage";
+import { buildEmbed, emojiKey, findRoleByEmoji } from "../roleMessage";
 import type { GuildRole } from "../types";
 
 describe("buildEmbed", () => {
@@ -44,39 +44,70 @@ describe("buildEmbed", () => {
   });
 });
 
+describe("emojiKey", () => {
+  it("keys unicode emojis by their codepoint", () => {
+    expect(emojiKey("🎮")).toBe("🎮");
+  });
+
+  it("extracts the snowflake ID from a markdown custom emoji", () => {
+    expect(emojiKey("<:gun:123456789012345678>")).toBe("123456789012345678");
+  });
+
+  it("extracts the snowflake ID from an animated markdown custom emoji", () => {
+    expect(emojiKey("<a:spin:123456789012345678>")).toBe("123456789012345678");
+  });
+
+  it("extracts the snowflake ID from a name:id identifier", () => {
+    expect(emojiKey("gun:123456789012345678")).toBe("123456789012345678");
+  });
+
+  it("accepts a bare snowflake ID", () => {
+    expect(emojiKey("123456789012345678")).toBe("123456789012345678");
+  });
+
+  it("keys a reaction emoji object by id for custom, name for unicode", () => {
+    expect(emojiKey({ id: "123456789012345678", name: "gun" })).toBe("123456789012345678");
+    expect(emojiKey({ id: null, name: "🔫" })).toBe("🔫");
+  });
+
+  it("returns null for an empty string", () => {
+    expect(emojiKey("")).toBeNull();
+    expect(emojiKey("   ")).toBeNull();
+  });
+});
+
 describe("reaction-to-role mapping logic", () => {
-  // This tests the core mapping logic used in handleReactionAdd/handleReactionRemove
+  // This tests the real mapping logic used in handleReactionAdd/handleReactionRemove
   // without needing any Discord API mocking.
 
   const roles: GuildRole[] = [
     { name: "overwatch", emoji: "🎮" },
     { name: "valorant", emoji: "🔫" },
     { name: "league", emoji: "⚔️" },
+    { name: "cs", emoji: "<:cs:123456789012345678>" },
   ];
 
-  it("finds a role entry by emoji", () => {
-    const emoji = "🎮";
-    const entry = roles.find((r) => r.emoji === emoji);
+  it("finds a unicode role entry by its codepoint", () => {
+    const entry = findRoleByEmoji(roles, { id: null, name: "🎮" });
     expect(entry).toBeDefined();
     expect(entry!.name).toBe("overwatch");
   });
 
-  it("returns undefined for an unconfigured emoji", () => {
-    const emoji = "❓";
-    const entry = roles.find((r) => r.emoji === emoji);
+  it("finds a custom-emoji role by its snowflake ID", () => {
+    // A reaction on a custom emoji exposes only name + id — the name alone
+    // ("cs") must not be compared against the config's markdown form.
+    const entry = findRoleByEmoji(roles, { id: "123456789012345678", name: "cs" });
+    expect(entry).toBeDefined();
+    expect(entry!.name).toBe("cs");
+  });
+
+  it("does not confuse custom emojis that share a name but differ by id", () => {
+    const entry = findRoleByEmoji(roles, { id: "999999999999999999", name: "cs" });
     expect(entry).toBeUndefined();
   });
 
-  it("matches role names case-insensitively", () => {
-    const roleName = "Overwatch";
-    const match = roles.find((r) => r.name.toLowerCase() === roleName.toLowerCase());
-    expect(match).toBeDefined();
-    expect(match!.name).toBe("overwatch");
-  });
-
-  it("does not match a role name that does not exist", () => {
-    const roleName = "minecraft";
-    const match = roles.find((r) => r.name.toLowerCase() === roleName.toLowerCase());
-    expect(match).toBeUndefined();
+  it("returns undefined for an unconfigured emoji", () => {
+    const entry = findRoleByEmoji(roles, { id: null, name: "❓" });
+    expect(entry).toBeUndefined();
   });
 });

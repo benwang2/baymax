@@ -15,7 +15,7 @@ import {
   type User,
 } from "discord.js";
 import { getGuildConfig } from "./config";
-import type { BotConfig, GuildConfig } from "./types";
+import type { BotConfig, GuildConfig, GuildRole } from "./types";
 
 const logger = new Logger({ name: "roleMessage" });
 
@@ -37,6 +37,47 @@ async function resolveReaction(
   react: MessageReaction | PartialMessageReaction,
 ): Promise<MessageReaction> {
   return react.partial ? await react.fetch() : (react as MessageReaction);
+}
+
+/**
+ * Compute a canonical identity key for an emoji so that a configured emoji
+ * string and a live reaction emoji can be compared reliably.
+ *
+ * Custom (guild) emojis are uniquely identified by their snowflake ID, which
+ * appears in every common config form (`<:name:id>`, `<a:name:id>`,
+ * `name:id`, `a:name:id`, or a bare ID). Unicode emojis are keyed by the
+ * codepoint string itself.
+ *
+ * Returns `null` only for an empty string (no valid emoji).
+ */
+export function emojiKey(
+  emoji: { id?: string | null; name?: string | null } | string,
+): string | null {
+  if (typeof emoji === "string") {
+    const trimmed = emoji.trim();
+    if (!trimmed) return null;
+    // Extract the snowflake ID from any common custom-emoji string form.
+    const id = trimmed.match(/(?:^|[<:])(\d{15,21})(?:>|$)/);
+    return id ? id[1]! : trimmed;
+  }
+  // Reaction emoji: prefer the unique snowflake ID when present, otherwise
+  // fall back to the (unicode) name.
+  return emoji.id ?? emoji.name ?? null;
+}
+
+/**
+ * Find the configured role whose emoji matches the given reaction emoji.
+ * Matching is keyed by canonical emoji identity (snowflake ID for custom
+ * emojis, codepoint for unicode) so custom emojis are never misread as
+ * unconfigured.
+ */
+export function findRoleByEmoji(
+  roles: GuildRole[],
+  emoji: { id?: string | null; name?: string | null } | string,
+): GuildRole | undefined {
+  const key = emojiKey(emoji);
+  if (key === null) return undefined;
+  return roles.find((r) => emojiKey(r.emoji) === key);
 }
 
 /** Persist changes to config.yaml on disk. */
@@ -171,22 +212,29 @@ async function updateRoleMessageForMessage(
   const embed = buildEmbed(roles);
   await message.edit({ embeds: [embed] });
 
-  // Sync reactions: add missing, remove stale
+  // Sync reactions: add missing, remove stale.
+  // Compare emojis by canonical key (snowflake ID for custom emojis) so that
+  // configured custom emojis are neither dropped nor duplicated.
   const currentReactions = message.reactions.cache;
-  const configuredEmojis = new Set(roles.map((r) => r.emoji));
-  const existingEmojis = new Set(currentReactions.map((r) => r.emoji.name ?? r.emoji.identifier));
+  const configuredEmojis = new Set(roles.map((r) => emojiKey(r.emoji)));
+  const existingKeys = new Set(
+    [...currentReactions.values()]
+      .map((r) => emojiKey(r.emoji))
+      .filter((k): k is string => k !== null),
+  );
 
   // Add missing reactions
-  for (const emoji of configuredEmojis) {
-    if (!existingEmojis.has(emoji)) {
-      await message.react(emoji);
+  for (const role of roles) {
+    const key = emojiKey(role.emoji);
+    if (key !== null && !existingKeys.has(key)) {
+      await message.react(role.emoji);
     }
   }
 
   // Remove stale reactions
-  for (const [_reactionId, reaction] of currentReactions) {
-    const emojiName = reaction.emoji.name ?? reaction.emoji.identifier;
-    if (!configuredEmojis.has(emojiName)) {
+  for (const reaction of currentReactions.values()) {
+    const key = emojiKey(reaction.emoji);
+    if (key !== null && !configuredEmojis.has(key)) {
       await reaction.remove();
     }
   }
@@ -212,8 +260,7 @@ export async function handleReactionAdd(
   // Check if this is our tracked message
   if (message.id !== guildConfig.auto_role.message_id) return;
 
-  const emojiName = reaction.emoji.name ?? reaction.emoji.identifier;
-  const roleEntry = guildConfig.auto_role.roles.find((r) => r.emoji === emojiName);
+  const roleEntry = findRoleByEmoji(guildConfig.auto_role.roles, reaction.emoji);
   if (!roleEntry) {
     // Unconfigured emoji — remove the reaction
     await reaction.remove();
@@ -254,8 +301,7 @@ export async function handleReactionRemove(
 
   if (message.id !== guildConfig.auto_role.message_id) return;
 
-  const emojiName = reaction.emoji.name ?? reaction.emoji.identifier;
-  const roleEntry = guildConfig.auto_role.roles.find((r) => r.emoji === emojiName);
+  const roleEntry = findRoleByEmoji(guildConfig.auto_role.roles, reaction.emoji);
   if (!roleEntry) return;
 
   const guild = message.guild;
