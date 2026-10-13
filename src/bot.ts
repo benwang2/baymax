@@ -6,6 +6,7 @@ import "./commands";
 import { Client } from "discordx";
 import { getConfig, getTestGuilds, onConfigChange } from "./config";
 import { ensureRoleMessage, updateRoleMessage } from "./roleMessage";
+import { registerWakeRelay } from "./wakeRelay";
 
 const logger = new Logger({ name: "bot" });
 
@@ -75,6 +76,10 @@ client.on(Events.InteractionCreate, (interaction) => {
     client.executeInteraction(interaction);
   }
 });
+
+// Optional: relay hayagrov mentions/replies to the Grok wake webhook.
+// No-op unless GROK_WAKE_WEBHOOK_URL is set (see README).
+registerWakeRelay(client);
 
 // ---------------------------------------------------------------------------
 // Lifecycle
